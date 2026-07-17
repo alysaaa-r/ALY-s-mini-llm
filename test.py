@@ -117,10 +117,11 @@ def _word_weight(word):
 def find_best_match(user_input: str):
     user_words = _content_words(_normalize_words(user_input))
     if not user_words:
-        return None, 0.0
+        return None, 0.0, set()
 
     best_score = 0.0
     best_answer = None
+    best_q_words = set()
     for q_words, _, answer in qa_pairs:
         if not q_words:
             continue
@@ -131,8 +132,9 @@ def find_best_match(user_input: str):
         if score > best_score:
             best_score = score
             best_answer = answer
+            best_q_words = q_words
 
-    return best_answer, best_score
+    return best_answer, best_score, best_q_words
 
 
 # =========================
@@ -202,12 +204,108 @@ def check_for_typos(question: str):
 
 
 # =========================
+# Yes/No question handling
+# =========================
+YES_NO_STARTERS = {
+    "is", "are", "was", "were", "do", "does", "did",
+    "can", "could", "will", "would", "has", "have", "should",
+}
+
+
+def is_yes_no_question(text: str) -> bool:
+    words = _normalize_words(text)
+    return bool(words) and words[0] in YES_NO_STARTERS
+
+
+def find_topic_match_for_verification(user_input: str):
+    """
+    Like find_best_match, but scores using only words that appear
+    SOMEWHERE in the training questions — ignoring "claim-only" words
+    (like specific numbers, or words that only ever appear in answers).
+    This keeps topic identification accurate even when the user's yes/no
+    question includes extra asserted details the training questions never
+    phrase directly (e.g. "Are you 21 years old?" vs. trained "How old are
+    you?").
+    """
+    all_words = _content_words(_normalize_words(user_input))
+    if not all_words:
+        return None, 0.0, set()
+
+    known_vocab = set(_doc_freq.keys())
+    probe_words = all_words & known_vocab
+    if not probe_words:
+        probe_words = all_words  # fallback if nothing recognized at all
+
+    best_score = 0.0
+    best_answer = None
+    best_q_words = set()
+    for q_words, _, answer in qa_pairs:
+        if not q_words:
+            continue
+        shared = probe_words & q_words
+        shared_weight = sum(_word_weight(w) for w in shared)
+        total_weight = sum(_word_weight(w) for w in probe_words) + sum(_word_weight(w) for w in q_words)
+        score = (2 * shared_weight) / total_weight if total_weight > 0 else 0.0
+        if score > best_score:
+            best_score = score
+            best_answer = answer
+            best_q_words = q_words
+
+    return best_answer, best_score, best_q_words
+
+
+def answer_yes_no(user_input: str):
+    """
+    Returns a (handled, response) tuple.
+    handled=False means this wasn't confidently answerable as yes/no,
+    so the caller should fall through to the normal flow.
+    """
+    matched_answer, score, matched_q_words = find_topic_match_for_verification(user_input)
+    if matched_answer is None or score < MATCH_THRESHOLD:
+        return False, None
+
+    user_words = _content_words(_normalize_words(user_input))
+    # "Claim words" = whatever the user asserted beyond the standard
+    # question wording for this topic (e.g. "21", "years" in
+    # "Are you 21 years old?" beyond the usual "old"/"age" wording).
+    claim_words = user_words - matched_q_words
+
+    if not claim_words:
+        # Nothing specific was asserted to verify — just confirm generally.
+        return True, f"Yes. {matched_answer}"
+
+    answer_words = set(_normalize_words(matched_answer))
+
+    # Numbers are the most decisive, precisely-checkable kind of claim
+    # (e.g. an asserted age or year) — if a claimed number isn't in the
+    # answer, that's a confident "No" regardless of other word overlap.
+    numeric_claims = {w for w in claim_words if w.isdigit()}
+    if numeric_claims and not numeric_claims.issubset(answer_words):
+        return True, f"No, that's not quite right. {matched_answer}"
+
+    word_claims = claim_words - numeric_claims
+    if word_claims:
+        overlap = word_claims & answer_words
+        ratio = len(overlap) / len(word_claims)
+        if ratio < 0.5:
+            return True, f"No, that's not quite right. {matched_answer}"
+
+    return True, f"Yes. {matched_answer}"
+
+
+# =========================
 # Main answer routing
 # =========================
 def answer_question(user_input: str) -> str:
+    # 0. Yes/No-phrased questions get a direct verdict + the exact answer.
+    if is_yes_no_question(user_input):
+        handled, response = answer_yes_no(user_input)
+        if handled:
+            return response
+
     # 1. Try the user's original phrasing first — command-style, polite,
     #    or blunt phrasing all get a fair shot before we assume it's a typo.
-    matched_answer, score = find_best_match(user_input)
+    matched_answer, score, _ = find_best_match(user_input)
     if matched_answer is not None and score >= MATCH_THRESHOLD:
         return matched_answer
 
@@ -220,7 +318,7 @@ def answer_question(user_input: str) -> str:
         confirm = input("    [Y/n]: ").strip().lower()
 
         if confirm in ("", "y", "yes"):
-            matched_answer, score = find_best_match(corrected_question)
+            matched_answer, score, _ = find_best_match(corrected_question)
             if matched_answer is not None and score >= MATCH_THRESHOLD:
                 return matched_answer
             return generate_answer(corrected_question)
