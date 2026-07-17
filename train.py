@@ -37,10 +37,11 @@ val_data = data[n:]
 print(f"Train tokens: {len(train_data)} | Validation tokens: {len(val_data)}")
 
 
-# Find every position where a Q&A pair starts (the token id for "question")
-# so training windows are aligned to real example boundaries, not random offsets.
-question_token_id = tokenizer.stoi["question"]
-all_boundaries = [i for i, t in enumerate(data.tolist()) if t == question_token_id]
+# Find every position where a Q&A pair starts (the token id for "topic",
+# since each block now begins with a "Topic: X" line) so training windows
+# are aligned to real example boundaries, not random offsets.
+topic_token_id = tokenizer.stoi["topic"]
+all_boundaries = [i for i, t in enumerate(data.tolist()) if t == topic_token_id]
 
 train_boundaries = [i for i in all_boundaries if i < n and i + block_size <= n]
 val_boundaries = [i for i in all_boundaries if i >= n and i + block_size <= len(data)]
