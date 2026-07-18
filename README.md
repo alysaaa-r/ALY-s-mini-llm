@@ -1,87 +1,230 @@
 # ALYAi - Hybrid RAG AI Assistant
 
-A personalized digital twin and school guide AI assistant built using a Hybrid Retrieval-Augmented Generation (RAG) architecture. It combines the conversational power of **Qwen2.5-1.5B** with the semantic search capabilities of **Sentence-Transformers**, all running completely offline.
+A personalized digital twin and school guide AI assistant built using a **Hybrid Retrieval-Augmented Generation (RAG)** architecture. It combines the conversational power of **Qwen2.5-1.5B** with the semantic search capabilities of **Sentence-Transformers**, all running completely offline.
 
 **Author:** Alyssa H. Requillo  
 **Course:** BS Information Technology  
-**Institution:** Trinidad Municipal College (TMC)  
+**Institution:** Trinidad Municipal College (TMC)
 
 ---
 
-## 🌟 Key Features
+# 🌟 Key Features
 
-* **100% Offline Execution:** After an initial model download, the AI runs entirely on your local machine without needing an internet connection.
-* **Dynamic Semantic Search:** Uses `all-MiniLM-L6-v2` to understand the *meaning* of your questions, not just exact keywords.
-* **Typo Correction Engine:** Automatically detects misspelled words, cross-references them against a dynamic vocabulary list, and asks for user confirmation before searching.
-* **Adaptive Prompting:** Automatically detects if you are asking for official institutional mandates (and returns exact text) or general knowledge (allowing for natural conversational paraphrasing).
-* **Smart Summarization:** Detects keywords like "brief" or "summarize" to automatically condense large blocks of information into short, digestible sentences.
+- **100% Offline Execution**  
+  After the initial model download, ALYAi runs entirely on your local machine without requiring an internet connection.
+
+- **Dynamic Semantic Search**  
+  Uses the `all-MiniLM-L6-v2` embedding model to understand the *meaning* of questions instead of relying on exact keyword matching.
+
+- **Typo Correction Engine**  
+  Automatically detects misspelled words, compares them against a dynamically generated vocabulary, and asks for confirmation before searching.
+
+- **Adaptive Prompting**  
+  Detects whether the user is asking for official institutional information or general knowledge, ensuring official mandates are returned verbatim while conversational responses remain natural.
+
+- **Smart Summarization**  
+  Automatically summarizes lengthy information whenever words like **"brief"**, **"summarize"**, or similar requests are detected.
 
 ---
 
-## 📂 Project Structure
+# 📂 Project Structure
 
 ```text
 ALYAi/
 ├── datasets/
-│   └── train.txt          # The dynamic knowledge base (Topics & Descriptions)
-├── test.py                # The main interactive chat script and RAG pipeline
-├── requirements.txt       # Python dependencies list
-├── .gitignore             # Prevents heavy system files from uploading to GitHub
+│   └── train.txt          # Dynamic knowledge base (Topics & Descriptions)
+├── test.py                # Main chatbot and Hybrid RAG pipeline
+├── requirements.txt       # Python dependencies
+├── .gitignore             # Prevents unnecessary files from being uploaded
 └── README.md              # Project documentation
+```
 
-⚙️ Setup & Installation
-Follow these steps to get the chatbot running on your local machine:
+---
 
-1. Clone the Repository
-Bash
-git clone [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git)
-cd YOUR_REPO_NAME
-2. Set Up a Virtual Environment
-It is highly recommended to run this in an isolated Python environment to avoid package conflicts.
+# ⚙️ Setup & Installation
 
-On Windows:
+Follow these steps to run ALYAi on your local computer.
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/alysaaa-r/ALY-s-mini-llm.git
+cd ALY-s-mini-llm
+```
+
+---
+
+## 2. Create a Virtual Environment
+
+Using a virtual environment is highly recommended to avoid dependency conflicts.
+
+### Windows
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-(Note: If Windows blocks the activation script, run Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass first).
+```
 
-On Mac/Linux:
+> **Note:** If PowerShell blocks the activation script, run:
 
-Bash
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+---
+
+### macOS / Linux
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
-3. Install Dependencies
-Bash
+```
+
+---
+
+## 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
-🚀 How to Run the AI
-To start the interactive chat interface, run:
+```
 
-Bash
+---
+
+# 🚀 Running ALYAi
+
+Launch the chatbot with:
+
+```bash
 python test.py
-⚠️ Note on First Launch: On the very first run, the script will automatically download approximately 3.2 GB of open-source model weights directly into your system cache. All subsequent launches will load instantly and work completely offline.
+```
 
-💬 How to Use — Asking Questions
-Because ALYAi uses semantic search, you do not need to memorize exact command phrases. You can talk to it naturally!
+---
 
-Examples of what you can ask:
+## ⚠️ First Launch
 
-"What is the TMC vision?" (Returns the exact official mandate).
+On the first execution, ALYAi automatically downloads approximately **3.2 GB** of open-source model weights into your local Hugging Face cache.
 
-"Give me a brief history of TMC." (Detects the word "brief" and summarizes the history paragraph).
+This happens **only once**.
 
-"Who is Alyssa?" (Pulls from the Creator Profile).
+After the download finishes:
 
-Handling Typos:
-If you type something incorrectly (e.g., "What is the misson?"), the AI will pause and ask:
-AI: Did you mean: "what is the mission"? ("misson" -> "mission")
+- ✅ No internet connection is required.
+- ✅ Everything runs locally.
+- ✅ Future launches load the models directly from your computer.
 
-Just press Enter or type Y to proceed!
+---
 
-📝 How to Update the AI's Knowledge
-Unlike traditional models, you do not need to retrain this AI.
+# 💬 Asking Questions
 
-To teach ALYAi new facts, simply open datasets/train.txt and add a new block of text using this format:
+ALYAi uses **semantic search**, so you can ask questions naturally without memorizing exact keywords.
 
-Plaintext
-Topic: [The Subject Name]
-Description: [A highly detailed paragraph explaining the subject.]
-Save the file and restart test.py. The AI will instantly read the new text, vectorize it, and be ready to answer questions about it immediately!
+## Examples
+
+```text
+What is the TMC vision?
+```
+
+Returns the official Vision statement.
+
+```text
+Give me a brief history of TMC.
+```
+
+Detects the word **"brief"** and summarizes the history.
+
+```text
+Who is Alyssa?
+```
+
+Retrieves information from the Creator Profile.
+
+---
+
+## Handling Typos
+
+If a word is misspelled, ALYAi will ask for confirmation.
+
+Example:
+
+```text
+User:
+What is the misson?
+
+AI:
+Did you mean:
+"What is the mission"?
+("misson" → "mission")
+```
+
+Simply press **Enter** or type:
+
+```text
+Y
+```
+
+to continue with the corrected search.
+
+---
+
+# 📝 Updating ALYAi's Knowledge
+
+Unlike traditional AI models, **no retraining is required**.
+
+Simply open:
+
+```text
+datasets/train.txt
+```
+
+Add a new knowledge entry using the following format:
+
+```text
+Topic: Subject Name
+
+Description:
+A detailed paragraph explaining the subject.
+```
+
+Example:
+
+```text
+Topic: Campus Library
+
+Description:
+The Trinidad Municipal College Library provides books,
+computers, study spaces, and online learning resources
+for students and faculty.
+```
+
+Save the file and restart the chatbot:
+
+```bash
+python test.py
+```
+
+ALYAi will automatically:
+
+1. Read the updated dataset.
+2. Generate new vector embeddings.
+3. Make the new information immediately searchable.
+
+No model retraining is necessary.
+
+---
+
+# 🛠 Technologies Used
+
+- **Python**
+- **Qwen2.5-1.5B-Instruct**
+- **Sentence-Transformers**
+- **all-MiniLM-L6-v2**
+- **PyTorch**
+- **Transformers (Hugging Face)**
+- **NumPy**
+- **Scikit-learn**
+
+---
+
+# 📌 Summary
+
+ALYAi is a fully offline Hybrid Retrieval-Augmented Generation (RAG) assistant designed to serve as a personalized digital twin and campus information guide for Trinidad Municipal College. By combining semantic search, adaptive prompting, typo correction, and intelligent summarization, it delivers accurate, context-aware responses while remaining easy to update through a simple text-based knowledge base.
