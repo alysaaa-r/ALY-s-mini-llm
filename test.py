@@ -1,349 +1,188 @@
+import os
 import re
 import difflib
 import torch
-from tokenizer import WordTokenizer
-from model import MiniLLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from sentence_transformers import SentenceTransformer, util
 
-MAX_NEW_TOKENS = 60
-TEMPERATURE = 0.6
-MATCH_THRESHOLD = 0.45   # how similar the user's question must be to a known one (0-1)
-TYPO_CUTOFF = 0.8         # how close a misspelled word must be to a real vocab word (0-1)
+# TYPO THRESHOLD: How close a misspelled word must be to a real dataset word (0-1)
+TYPO_CUTOFF = 0.68       
 
-# Common "filler" words that don't carry topic meaning — ignored when scoring
-# how similar a question is to a known one, so phrasing style (command vs
-# question, polite vs blunt) doesn't matter as much as the actual topic.
-STOPWORDS = {
-    "i", "me", "my", "you", "your", "yours", "we", "us", "our",
-    "please", "give", "tell", "share", "want", "know", "could", "would",
-    "can", "do", "does", "did", "is", "are", "was", "were", "be",
-    "the", "a", "an", "of", "to", "in", "on", "for", "about", "with",
-    "what", "who", "when", "where", "how", "that", "this", "it",
-}
+print("Loading models (this might take a moment)...")
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# =========================
-# Load checkpoint
-# =========================
-checkpoint = torch.load("checkpoint/mini-llm.pt", map_location="cpu")
+embed_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+model_name = "Qwen/Qwen2.5-1.5B-Instruct" 
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+llm_model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto").to(device)
 
-tokenizer = WordTokenizer.from_vocab(checkpoint["stoi"], checkpoint["itos"])
-
-config = checkpoint["config"]
-model = MiniLLM(
-    vocab_size=checkpoint["vocab_size"],
-    n_embd=config["n_embd"],
-    block_size=config["block_size"],
-    n_head=config["n_head"],
-    n_layer=config["n_layer"],
-)
-model.load_state_dict(checkpoint["model_state_dict"])
-model.eval()
-
-print("Model loaded. Type a question, or 'exit' to quit.\n")
-
-
-# =========================
-# Small talk (handled outside the model entirely — like a real agent's
-# hardcoded intents for things that aren't really "questions")
-# =========================
-SMALL_TALK = [
-    (["hi", "hello", "hey", "greetings"], "Hello! Ask me about TMC's vision, mission, goal, or about me."),
-    (["thank", "thanks", "thankyou"], "You're welcome!"),
-    (["bye", "goodbye", "seeya"], "Goodbye! Type 'exit' anytime to quit."),
-    (["how are you"], "I'm just a small language model, but I'm running well! Ask me something about TMC."),
-]
-
-
-def check_small_talk(text: str):
-    lowered = text.lower().strip().rstrip("!.?")
-    for triggers, response in SMALL_TALK:
-        for trigger in triggers:
-            if lowered == trigger or lowered.startswith(trigger + " "):
-                return response
-    return None
-
-
-# =========================
-# Exact-match safety net (stopword-filtered)
-# =========================
-def _normalize_words(text: str):
-    return re.findall(r"[a-zA-Z0-9]+", text.lower())
-
-
-def _content_words(words):
-    """Strip out filler words, keeping only topic-carrying words.
-    Falls back to the full word set if everything happened to be a stopword."""
-    content = set(w for w in words if w not in STOPWORDS)
-    return content if content else set(words)
-
-
-def load_qa_pairs(path="datasets/train.txt"):
+# =====================================================================
+# LOAD DATASET (WITH TOPIC TRACKING)
+# =====================================================================
+def load_and_vectorize_dataset(path="datasets/train.txt"):
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
-
-    pairs = []
+    
+    # Build vocabulary list for typo detection
+    words = re.findall(r"[a-zA-Z0-9]+", text.lower())
+    vocab_words = list(set(words))
+    
     blocks = [b.strip() for b in text.split("\n\n") if b.strip()]
+    dataset_records = []
+    questions_only = []
+    
     for block in blocks:
-        topic_match = re.search(r"Topic:\s*(\S+)", block)
-        q_match = re.search(r"Question:\s*(.+)", block)
-        a_match = re.search(r"Answer:\s*(.+)", block, re.DOTALL)
-        if q_match and a_match:
-            question = q_match.group(1).strip()
-            answer = a_match.group(1).strip()
-            q_content = _content_words(_normalize_words(question))
-            if topic_match:
-                q_content = q_content | {topic_match.group(1).strip().lower()}
-            pairs.append((q_content, question, answer))
-    return pairs
+        topic_match = re.search(r"Topic:\s*(\S.+)", block)
+        # Search for Description instead of Q&A
+        d_match = re.search(r"Description:\s*(.+)", block, re.DOTALL)
+        
+        if d_match:
+            topic = topic_match.group(1).strip().lower() if topic_match else "general"
+            desc = d_match.group(1).strip()
+            
+            # Save the description as the answer, and use it for the semantic search index
+            dataset_records.append({"topic": topic, "question": "", "answer": desc})
+            # Combine the topic and description so the search engine reads both!
+            questions_only.append(f"{topic} {desc}")
+            
+    question_embeddings = embed_model.encode(questions_only, convert_to_tensor=True)
+    return dataset_records, question_embeddings, vocab_words
 
+dataset, dataset_embeddings, VOCAB_WORDS = load_and_vectorize_dataset()
+print(f"Successfully loaded {len(dataset)} facts.")
 
-qa_pairs = load_qa_pairs()
-
-# Rarity weighting: words that appear in many different training questions
-# (like "school", "tmc") are common and not very distinctive. Words that
-# appear in only one or two questions (like "vision", "birthday") are
-# highly distinctive. We weigh rare words more heavily so a match based
-# only on a common word (e.g. just "school") isn't treated as confident.
-_doc_freq = {}
-for q_words, _, _ in qa_pairs:
-    for w in q_words:
-        _doc_freq[w] = _doc_freq.get(w, 0) + 1
-
-
-def _word_weight(word):
-    df = _doc_freq.get(word, 1)
-    return 1.0 / df
-
-
-def find_best_match(user_input: str):
-    user_words = _content_words(_normalize_words(user_input))
-    if not user_words:
-        return None, 0.0, set()
-
-    best_score = 0.0
-    best_answer = None
-    best_q_words = set()
-    for q_words, _, answer in qa_pairs:
-        if not q_words:
-            continue
-        shared = user_words & q_words
-        shared_weight = sum(_word_weight(w) for w in shared)
-        total_weight = sum(_word_weight(w) for w in user_words) + sum(_word_weight(w) for w in q_words)
-        score = (2 * shared_weight) / total_weight if total_weight > 0 else 0.0
-        if score > best_score:
-            best_score = score
-            best_answer = answer
-            best_q_words = q_words
-
-    return best_answer, best_score, best_q_words
-
-
-# =========================
-# Generative fallback
-# =========================
-def generate_answer(question: str) -> str:
-    prompt = f"Question: {question}\nAnswer:"
-
-    try:
-        encoded = tokenizer.encode(prompt)
-    except KeyError as e:
-        return f"(I don't recognize the word {e} — it wasn't in my training data.)"
-
-    if not encoded:
-        return "(I couldn't understand any words in that question.)"
-
-    context = torch.tensor([encoded], dtype=torch.long)  # shape (1, T)
-
-    with torch.no_grad():
-        generated = model.generate(context, max_new_tokens=MAX_NEW_TOKENS, temperature=TEMPERATURE)
-
-    full_text = tokenizer.decode(generated[0].tolist())
-
-    prompt_decoded = tokenizer.decode(encoded)
-    if full_text.startswith(prompt_decoded):
-        answer = full_text[len(prompt_decoded):].strip()
-    else:
-        answer = full_text.strip()
-
-    cut_point = answer.find(" question ")
-    if cut_point != -1:
-        answer = answer[:cut_point].strip()
-
-    return answer if answer else "(No answer generated.)"
-
-
-# =========================
-# Typo detection and correction
-# =========================
-VOCAB_WORDS = list(tokenizer.stoi.keys())
-
-
-def suggest_correction(word: str):
-    """Find the closest real vocabulary word to a possibly-misspelled word."""
-    if word in tokenizer.stoi or word in STOPWORDS:
-        return None  # already a real word, or a common word we don't want to "correct"
-
-    matches = difflib.get_close_matches(word, VOCAB_WORDS, n=1, cutoff=TYPO_CUTOFF)
-    return matches[0] if matches else None
-
-
+# =====================================================================
+# TYPO CORRECTION ENGINE
+# =====================================================================
 def check_for_typos(question: str):
-    words = _normalize_words(question)
+    words = re.findall(r"[a-zA-Z0-9]+", question.lower())
     corrected_words = []
     corrections = []
 
     for word in words:
-        suggestion = suggest_correction(word)
-        if suggestion:
-            corrected_words.append(suggestion)
-            corrections.append((word, suggestion))
-        else:
+        if word in VOCAB_WORDS or len(word) <= 2: 
             corrected_words.append(word)
+        else:
+            matches = difflib.get_close_matches(word, VOCAB_WORDS, n=1, cutoff=TYPO_CUTOFF)
+            if matches:
+                corrected_words.append(matches[0])
+                corrections.append((word, matches[0]))
+            else:
+                corrected_words.append(word)
 
     corrected_question = " ".join(corrected_words)
     return corrected_question, corrections
 
+# =====================================================================
+# RETRIEVAL ENGINE
+# =====================================================================
+def get_relevant_context(user_query, threshold=0.2):
+    query_embedding = embed_model.encode(user_query, convert_to_tensor=True)
+    cos_scores = util.cos_sim(query_embedding, dataset_embeddings)[0]
+    best_match_idx = torch.argmax(cos_scores).item()
+    best_score = cos_scores[best_match_idx].item()
+    
+    if best_score >= threshold:
+        return dataset[best_match_idx] # Returns the whole record dictionary
+    return None
 
-# =========================
-# Yes/No question handling
-# =========================
-YES_NO_STARTERS = {
-    "is", "are", "was", "were", "do", "does", "did",
-    "can", "could", "will", "would", "has", "have", "should",
-}
+# =====================================================================
+# MAIN INTERACTIVE LOOP
+# =====================================================================
+def chat():
+    print("\n=========================================")
+    print("🤖 ALYai Agent at your service!")
+    print("Ask me anything about the TMC, the creator, or about myself. Type 'exit' to quit.")
+    print("=========================================\n")
+    
+    while True:
+        user_input = input("You: ").strip()
+        if not user_input or user_input.lower() == "exit":
+            print("Goodbye!")
+            break
+            
+        # Run typo detection
+        processed_input = user_input
+        corrected_text, corrections = check_for_typos(user_input)
+        
+        if corrections:
+            correction_list = ", ".join(f'"{orig}" -> "{fix}"' for orig, fix in corrections)
+            print(f'AI: Did you mean: "{corrected_text}"? ({correction_list})')
+            confirm = input("    [Y/n]: ").strip().lower()
+            
+            if confirm in ("", "y", "yes"):
+                processed_input = corrected_text
+            else:
+                print("    [Proceeding with original text...]")
+        
+        # --- THE NEW CLARIFICATION RULE ---
+        word_count = len(processed_input.split())
+        
+        if word_count <= 2:
+            # If the input is too short, ask the user to be specific
+            system_prompt = (
+                f"The user just typed a very broad keyword or short phrase: '{processed_input}'. "
+                "Respond naturally and politely by asking them what specific information they "
+                "would like to know about that topic."
+            )
+        else:
+            # If it's a full question, run the semantic retrieval normally
+            matched_record = get_relevant_context(processed_input)
+            
+            if matched_record:
+                topic = matched_record["topic"]
+                fact = matched_record["answer"]
+            
+                # Check if the user specifically asked for a short version
+                user_wants_brief = any(word in processed_input.lower() for word in ["brief", "short", "summarize", "summary", "paraphrase"])
+            
+                if topic in ["vision", "mission", "goal", "philosophy", "slogan"] and not user_wants_brief:
+                # Default behavior for official statements: Exact copy
+                    system_prompt = (
+                    "You are an AI assistant. The user is asking for an official mandate statement. "
+                    "You MUST reply by providing the EXACT text from the context below word-for-word. "
+                    "Do not paraphrase or reword it.\n\n"
+                    f"Context: {fact}"
+                )
+                else:
+                # Behavior for general questions OR when the user asks for a brief version
+                    system_prompt = (
+                    "You are an AI assistant. Answer the user's question based on the context below. "
+                    "Pay very close attention to their instructions. If they ask for a 'brief', 'short', or 'summarized' answer, "
+                    "you MUST heavily shorten and paraphrase the context into just one or two simple sentences. "
+                    "Otherwise, answer naturally.\n\n"
+                    f"Context: {fact}"
+                )
+            else:
+                system_prompt = (
+                    "You are Alyssa's AI assistant representing Trinidad Municipal College (TMC). "
+                    "If the user asks a question and you don't know the answer, "
+                    "simply reply: 'I'm sorry, I don't have that information in my dataset.' "
+                    "Do not make up facts or guess."
+            )
+            
+        # Generate the response
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": processed_input}
+        ]
+        
+        text_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        model_inputs = tokenizer([text_prompt], return_tensors="pt").to(device)
+        
+        with torch.no_grad():
+            generated_ids = llm_model.generate(
+                **model_inputs,
+                max_new_tokens=150,
+                temperature=0.7,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id
+            )
+            
+        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)]
+        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        
+        print(f"AI: {response}\n")
 
-
-def is_yes_no_question(text: str) -> bool:
-    words = _normalize_words(text)
-    return bool(words) and words[0] in YES_NO_STARTERS
-
-
-def find_topic_match_for_verification(user_input: str):
-    """
-    Like find_best_match, but scores using only words that appear
-    SOMEWHERE in the training questions — ignoring "claim-only" words
-    (like specific numbers, or words that only ever appear in answers).
-    This keeps topic identification accurate even when the user's yes/no
-    question includes extra asserted details the training questions never
-    phrase directly (e.g. "Are you 21 years old?" vs. trained "How old are
-    you?").
-    """
-    all_words = _content_words(_normalize_words(user_input))
-    if not all_words:
-        return None, 0.0, set()
-
-    known_vocab = set(_doc_freq.keys())
-    probe_words = all_words & known_vocab
-    if not probe_words:
-        probe_words = all_words  # fallback if nothing recognized at all
-
-    best_score = 0.0
-    best_answer = None
-    best_q_words = set()
-    for q_words, _, answer in qa_pairs:
-        if not q_words:
-            continue
-        shared = probe_words & q_words
-        shared_weight = sum(_word_weight(w) for w in shared)
-        total_weight = sum(_word_weight(w) for w in probe_words) + sum(_word_weight(w) for w in q_words)
-        score = (2 * shared_weight) / total_weight if total_weight > 0 else 0.0
-        if score > best_score:
-            best_score = score
-            best_answer = answer
-            best_q_words = q_words
-
-    return best_answer, best_score, best_q_words
-
-
-def answer_yes_no(user_input: str):
-    """
-    Returns a (handled, response) tuple.
-    handled=False means this wasn't confidently answerable as yes/no,
-    so the caller should fall through to the normal flow.
-    """
-    matched_answer, score, matched_q_words = find_topic_match_for_verification(user_input)
-    if matched_answer is None or score < MATCH_THRESHOLD:
-        return False, None
-
-    user_words = _content_words(_normalize_words(user_input))
-    # "Claim words" = whatever the user asserted beyond the standard
-    # question wording for this topic (e.g. "21", "years" in
-    # "Are you 21 years old?" beyond the usual "old"/"age" wording).
-    claim_words = user_words - matched_q_words
-
-    if not claim_words:
-        # Nothing specific was asserted to verify — just confirm generally.
-        return True, f"Yes. {matched_answer}"
-
-    answer_words = set(_normalize_words(matched_answer))
-
-    # Numbers are the most decisive, precisely-checkable kind of claim
-    # (e.g. an asserted age or year) — if a claimed number isn't in the
-    # answer, that's a confident "No" regardless of other word overlap.
-    numeric_claims = {w for w in claim_words if w.isdigit()}
-    if numeric_claims and not numeric_claims.issubset(answer_words):
-        return True, f"No, that's not quite right. {matched_answer}"
-
-    word_claims = claim_words - numeric_claims
-    if word_claims:
-        overlap = word_claims & answer_words
-        ratio = len(overlap) / len(word_claims)
-        if ratio < 0.5:
-            return True, f"No, that's not quite right. {matched_answer}"
-
-    return True, f"Yes. {matched_answer}"
-
-
-# =========================
-# Main answer routing
-# =========================
-def answer_question(user_input: str) -> str:
-    # 0. Yes/No-phrased questions get a direct verdict + the exact answer.
-    if is_yes_no_question(user_input):
-        handled, response = answer_yes_no(user_input)
-        if handled:
-            return response
-
-    # 1. Try the user's original phrasing first — command-style, polite,
-    #    or blunt phrasing all get a fair shot before we assume it's a typo.
-    matched_answer, score, _ = find_best_match(user_input)
-    if matched_answer is not None and score >= MATCH_THRESHOLD:
-        return matched_answer
-
-    # 2. No good match — check if unrecognized words might be typos, and
-    #    ask the user to confirm before assuming a correction.
-    corrected_question, corrections = check_for_typos(user_input)
-    if corrections:
-        correction_list = ", ".join(f'"{orig}" -> "{fix}"' for orig, fix in corrections)
-        print(f'AI: Did you mean: "{corrected_question}"? ({correction_list})')
-        confirm = input("    [Y/n]: ").strip().lower()
-
-        if confirm in ("", "y", "yes"):
-            matched_answer, score, _ = find_best_match(corrected_question)
-            if matched_answer is not None and score >= MATCH_THRESHOLD:
-                return matched_answer
-            return generate_answer(corrected_question)
-
-    # 3. Still nothing — fall back to the real trained model.
-    return generate_answer(user_input)
-
-
-# =========================
-# Chat loop
-# =========================
-while True:
-    user_input = input("You: ").strip()
-
-    if not user_input:
-        continue
-
-    if user_input.lower() == "exit":
-        print("Goodbye!")
-        break
-
-    small_talk_reply = check_small_talk(user_input)
-    if small_talk_reply:
-        print("AI:", small_talk_reply, "\n")
-        continue
-
-    answer = answer_question(user_input)
-    print("AI:", answer, "\n")
+if __name__ == "__main__":
+    chat()

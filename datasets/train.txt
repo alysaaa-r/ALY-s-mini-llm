@@ -1,171 +1,38 @@
 Topic: Vision
-Question: What is the vision of the school?
-Answer: A model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
-
-Topic: Vision
-Question: What is TMC's vision?
-Answer: A model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
-
-Topic: Vision
-Question: State the vision of Trinidad Municipal College.
-Answer: A model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
-
-Topic: Vision
-Question: Tell me the school's vision.
-Answer: A model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
-
-Topic: Vision
-Question: What does TMC envision for its students?
-Answer: A model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
+Description: Trinidad Municipal College (TMC) envisions itself as a model institution with fully developed academic, technical-vocational education and skill of manpower with positive work attitudes anchored in the core values of leadership and professionalism essential in the creation of self-reliant citizens.
 
 Topic: Mission
-Question: What is the mission of the school?
-Answer: To build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
-
-Topic: Mission
-Question: What is TMC's mission?
-Answer: To build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
-
-Topic: Mission
-Question: State the mission of Trinidad Municipal College.
-Answer: To build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
-
-Topic: Mission
-Question: Tell me the school's mission.
-Answer: To build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
-
-Topic: Mission
-Question: What is TMC trying to achieve as an institution?
-Answer: To build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
+Description: TMC's mission is to build well-trained, competent and employable professionals, who will meet the demands of the local and international work places.
 
 Topic: Goal
-Question: What is the goal of the school?
-Answer: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
-
-Topic: Goal
-Question: What are TMC's goals?
-Answer: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
-
-Topic: Goal
-Question: State the goal of Trinidad Municipal College.
-Answer: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
-
-Topic: Goal
-Question: What does TMC aim to achieve?
-Answer: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
-
-Topic: Goal
-Question: What is the school's objective for its students?
-Answer: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
+Description: TMC aims at evolving a whole individual as a child of God and a member of a democratic society who is professionally competent that can provide leadership and advance knowledge, well-trained in a certain vocation not only to help himself but to help others, and practical yet responsible and obedient to the laws of God and to the laws of the government.
 
 Topic: Philosophy
-Question: What is the philosophy of the school?
-Answer: TMC adheres to the philosophy that education is life and growth guided by faith in God and love of fellowmen in an environment of competitiveness, professionalism and excellence.
-
-Topic: Philosophy
-Question: What is TMC's philosophy?
-Answer: TMC adheres to the philosophy that education is life and growth guided by faith in God and love of fellowmen in an environment of competitiveness, professionalism and excellence.
-
-Topic: Philosophy
-Question: State the philosophy of Trinidad Municipal College.
-Answer: TMC adheres to the philosophy that education is life and growth guided by faith in God and love of fellowmen in an environment of competitiveness, professionalism and excellence.
+Description: TMC adheres to the philosophy that education is life and growth guided by faith in God and love of fellowmen in an environment of competitiveness, professionalism and excellence.
 
 Topic: Slogan
-Question: What is the slogan of the school?
-Answer: TMC is committed to public educational services second to none.
+Description: The official slogan and motto of the school is: "TMC is committed to public educational services second to none."
 
-Topic: Slogan
-Question: What is TMC's slogan?
-Answer: TMC is committed to public educational services second to none.
+Topic: AI Identity
+Description: My name is ALYAi. I am a mini language model and digital AI assistant created by Alyssa H. Requillo as a school project.
 
-Topic: Slogan
-Question: What is the school's motto?
-Answer: TMC is committed to public educational services second to none.
+Topic: Creator Profile
+Description: My creator, Alyssa H. Requillo, is a 4th-year Bachelor of Science in Information Technology (BSIT) student studying at Trinidad Municipal College. She was born on May 16, 2005 and is currently 21 years old as of now, and she resides in Cambangay Norte, San Miguel, Bohol.
 
-Topic: Identity
-Question: Who are you?
-Answer: I am a mini language model created by Alyssa H. Requillo as a school project.
+Topic: Creator Interests and Projects
+Description: Alyssa is deeply passionate about full-stack web and mobile development, specifically utilizing React Native, Node.js, Express, and Laravel. She also enjoys working with modern tools like Docker, Git, and Figma, and prefers retro RPG aesthetics and pixel art in her UI designs. Some of her major academic development projects include the Clinic Appointment System (built with ASP.NET Core C#), FinTrack (a personal finance application utilizing Firebase), and WAIS (Waste Audit and Incentive System) utilizing MERN stack, Docker, Firebase, and Version Control.
 
-Topic: Identity
-Question: Introduce yourself.
-Answer: I am a mini language model created by Alyssa H. Requillo as a school project.
+Topic: TMC History
+Description: TMC's story began in 1980 when Mr. Paciano Petarco and Mayor Atty. Avelino N. Puracan converted the old 1957 Municipal Hall into a private vocational school called Trinidad Institute of Technology. In 1985, it was registered as Trinidad Junior College. On August 1, 2003, it was transformed into Trinidad Municipal College under the local government. It was officially recognized by CHED as a Higher Education Institution on August 18, 2020.
 
-Topic: Identity
-Question: Tell me about yourself.
-Answer: I am a mini language model created by Alyssa H. Requillo as a school project.
+Topic: TMC Leadership and Enrollment
+Description: TMC is currently led by Mayor Atty. Roberto C. Cajes, Ph.D. The institution has seen massive growth, with enrollment increasing from just 510 students in 2007 to more than 7,000 students by the 2022-2023 academic year.
 
-Topic: Creator
-Question: Who created this model?
-Answer: This model was created by Alyssa H. Requillo.
+Topic: TMC Courses and Programs
+Description: TMC offers CHED-recognized programs including BS in Information Technology, BS in Office Administration, BA in Political Science, BA in Communication, Bachelor of Secondary Education (English), Bachelor of Elementary Education, and BS in Criminology. It also offers TESDA programs like Automotive Servicing NC-I and Shielded Metal Arc Welding NC-I and NC-II.
 
-Topic: Creator
-Question: Who made you?
-Answer: This model was created by Alyssa H. Requillo.
+Topic: TMC Achievements
+Description: A notable academic achievement for TMC occurred during the June 2022 Licensure Examination for Criminologists, where the school placed 8th nationwide in the Philippines through Criminologist Crisiolo M. Langamen Jr., a graduate of Batch 2021.
 
-Topic: Creator
-Question: Who is your creator?
-Answer: This model was created by Alyssa H. Requillo.
-
-Topic: Name
-Question: What is your name?
-Answer: My name is Alyssa H. Requillo.
-
-Topic: Name
-Question: What is your full name?
-Answer: My name is Alyssa H. Requillo.
-
-Topic: Course
-Question: What course are you taking?
-Answer: My course is Bachelor of Science in Information Technology. Alyssa H. Requillo is taking Bachelor of Science in Information Technology.
-
-Topic: Course
-Question: What is your course?
-Answer: My course is Bachelor of Science in Information Technology. Alyssa H. Requillo is taking Bachelor of Science in Information Technology.
-
-Topic: Course
-Question: What degree program are you enrolled in?
-Answer: My degree program is Bachelor of Science in Information Technology. Alyssa H. Requillo is taking Bachelor of Science in Information Technology.
-
-Topic: Year
-Question: What year level are you in?
-Answer: My year level is 4th year. Alyssa H. Requillo is currently a 4th year student.
-
-Topic: Year
-Question: What year are you in college?
-Answer: My year level is 4th year. Alyssa H. Requillo is currently a 4th year student.
-
-Topic: Birthday
-Question: When were you born?
-Answer: I was born on May 16, 2005. Alyssa H. Requillo was born on May 16, 2005.
-
-Topic: Birthday
-Question: What is your birthday?
-Answer: My birthday is May 16, 2005. Alyssa H. Requillo was born on May 16, 2005.
-
-Topic: Age
-Question: How old are you?
-Answer: I am 21 years old. Alyssa H. Requillo is 21 years old.
-
-Topic: Age
-Question: What is your age?
-Answer: My age is 21 years old. Alyssa H. Requillo is 21 years old.
-
-Topic: School
-Question: What school do you study at?
-Answer: I study at Trinidad Municipal College. Alyssa H. Requillo studies at Trinidad Municipal College.
-
-Topic: School
-Question: Where do you study?
-Answer: I study at Trinidad Municipal College. Alyssa H. Requillo studies at Trinidad Municipal College.
-
-Topic: Interests
-Question: What are your interests?
-Answer: My interests include software development and building data-driven solutions. Alyssa H. Requillo has a strong interest in software development.
-
-Topic: Interests
-Question: What are you passionate about?
-Answer: I am passionate about software development and building data-driven solutions. Alyssa H. Requillo has a strong interest in software development.
-
-Topic: Interests
-Question: What kind of projects have you built?
-Answer: I have built major applications for school projects using software development skills. Alyssa H. Requillo has developed major applications for school projects.
+Topic: TMC Admission and Affordability
+Description: TMC is the only LGU-managed institution in the area offering free higher education as a CHED-recognized Local University and College. It welcomes students from all walks of life regardless of socio-economic condition, disability, religion, race, or cultural background, provided they meet the admission requirements.
